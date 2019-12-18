@@ -6,7 +6,7 @@
 #include <string>
 #include <fstream>
 
-//Ð’ = 14
+//В = 14
 
 //n1 - 4
 //n2 - 6
@@ -102,7 +102,6 @@ int get_right_neighbor(int i)
 {
     return i + 1;
 }
-
 //левый сосед
 bdd left_neighbors(int neighbor_k, int neighbor_v, int main_k, int main_v)
 {
@@ -141,22 +140,28 @@ bdd down_neighbors(int neighbor_k, int neighbor_v, int main_k, int main_v)
     }  
     return task;
 }
-
-bdd neighbors(int k1, int v1, int kCntr, int vCntr)
+//проверка соседей
+bdd neighbors(int neighbor_k, int neighbor_v, int main_k, int main_v)
 {
     bdd task = bddfalse;
     for (int i = 0; i < N; ++i)
     {
         if (has_bot_neighbor(i) && has_left_neighbor(i))
-            task |= !(p[kCntr][i][vCntr] ^ p[k1][get_left_neighbor(get_bot_neighbor(i))][v1]);
-
+        {
+            task |= !(p[main_k][i][main_v] ^ p[neighbor_k][get_left_neighbor(get_bot_neighbor(i))][neighbor_v]);
+        }
         if (has_top_neighbor(i) && has_left_neighbor(i))
-            task |= !(p[kCntr][i][vCntr] ^ p[k1][get_left_neighbor(get_top_neighbor(i))][v1]);
-
+        {
+            task |= !(p[main_k][i][main_v] ^ p[neighbor_k][get_left_neighbor(get_top_neighbor(i))][neighbor_v]);
+        }
         if (!(has_right_neighbor(i) && has_top_neighbor(i)) && !(has_right_neighbor(i) && has_bot_neighbor(i)))
-            task &= !p[k1][i][v1];
+        {
+            task &= !p[neighbor_k][i][neighbor_v];
+        }
         if (!(has_top_neighbor(i) && has_left_neighbor(i)) && !(has_bot_neighbor(i) && has_left_neighbor(i)))
-            task &= !p[kCntr][i][vCntr];
+        {
+            task &= !p[main_k][i][main_v];
+        }
     }
     return task;
 }
@@ -167,21 +172,24 @@ int main()
     bdd_setvarnum(TOTAL_BIT);
     bdd_setcacheratio(100);
 
-    // Ð¸Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð°Ñ†Ð¸Ñ p[k][i][j]
+    //заполнение
     for (int k = 0; k < M; ++k)
     {
         int I = 0;
-        for (auto i = 0; i < N; ++i)
+        for (int i = 0; i < N; ++i)
         {
-            // Ñ†Ð¸ÐºÐ» ÑÐ²Ð¾Ð¹ÑNÐ²
-            for (auto j = 0; j < N; ++j)
+            for (int j = 0; j < N; ++j)
             {
                 p[k][i][j] = bddtrue;
-                for (auto l = 0; l < LOG_N; ++l)
+                for (int l = 0; l < LOG_N; ++l)
+                {
                     if (j >> l & 1)
+                    {
                         p[k][i][j] &= bdd_ithvar(I + LOG_N * k + l);
-                    else
+                    } else {
                         p[k][i][j] &= bdd_nithvar(I + LOG_N * k + l);
+                    }
+                }       
             }
             I += LOG_N * M;
         }
@@ -202,27 +210,31 @@ int main()
     }
     
 
-    // Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¸Ðµ n1
+    //  ограничение первого типа (N = 4)
     {
-        task &= p[3][0][0];
-        task &= p[3][8][8];
-        task &= p[2][0][7];
+        // 3 1 1 
         task &= p[3][1][1];
+        // 2 7 8
+        task &= p[2][7][8];
+        // 1 4 3
+        task &= p[1][4][3];
+        // 1 2 1
+        task &= p[1][2][1];
 
-        // // Ð´Ð¾Ð±Ð°Ð²Ð¸Ð¼ ÐµÑ‰Ñ‘
-        task &= p[3][2][2];
-        task &= p[2][2][3];
+        // дополнительно
+        // task &= p[3][2][2];
+        // task &= p[2][2][3];
 
         task &= p[0][0][8];
         task &= p[1][1][4];
         task &= p[1][3][2];
         task &= p[3][4][3];
 
-        task &= p[1][5][6];
-        task &= p[0][2][4];
-        task &= p[2][6][1];
-        task &= p[2][4][6];
-        task &= p[3][7][4];
+        // task &= p[1][5][6];
+        // task &= p[0][2][4];
+        // task &= p[2][6][1];
+        // task &= p[2][4][6];
+        // task &= p[3][7][4];
         // task &= p[0][4][1];
         // task &= p[0][6][7];
         // task &= p[0][8][5];
@@ -241,64 +253,83 @@ int main()
     cout << bdd_satcount(task) << " solution(s) after n1\n"<<endl;
 
 
-    // Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¸Ðµ n2
+    // ограничение типа 2 (N = 6)
     {
-        for (int i = 0; i < N; ++i)
-            task &= !(p[3][i][8] ^ p[1][i][0]);
-        for (int i = 0; i < N; ++i)
-            task &= !(p[3][i][7] ^ p[0][i][3]);
-        for (int i = 0; i < N; ++i)
-            task &= !(p[0][i][8] ^ p[2][i][7]);
-
-        for (int i = 0; i < N; ++i)
-            task &= !(p[1][i][6] ^ p[2][i][5]);
-        for (int i = 0; i < N; ++i)
-            task &= !(p[2][i][7] ^ p[0][i][8]);
-        for (int i = 0; i < N; ++i)
-            task &= !(p[1][i][7] ^ p[3][i][5]);
+        //3 4 4 2
+        // for (int i = 0; i < N; ++i) task &= !(p[3][i][4] ^ p[4][i][2]);
+        // //1 2 3 4 
+        // for (int i = 0; i < N; ++i) task &= !(p[1][i][2] ^ p[3][i][4]);
+        // //4 3 2 1
+        // for (int i = 0; i < N; ++i) task &= !(p[4][i][3] ^ p[2][i][1]);
+        // //2 2 5 0 
+        // for (int i = 0; i < N; ++i) task &= !(p[2][i][2] ^ p[5][i][0]);
+        // //6 3 6 2
+        // for (int i = 0; i < N; ++i) task &= !(p[6][i][3] ^ p[6][i][2]);
+        // //8 0 0 0
+        // for (int i = 0; i < N; ++i) task &= !(p[8][i][0] ^ p[0][i][0]);
 
     }
     cout << bdd_satcount(task) << " solution(s) after n2\n"<<endl;
-
-    // Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¸Ðµ n3
+    
+    // ограничение типа 3 (N = 4)
     {
-        task &= down_neighbors(1, 3, 2, 3);
-        task &= left_neighbors(1, 2, 3, 4);
-        task &= left_neighbors(2, 2, 3, 7);
-        task &= down_neighbors(2, 1, 1, 3);
+        int n_property_1, property_value_1, n_property_2, property_value_2;
+        
+        // объект свойство 3 = 2 снизу объект свойство 1 = 3
+        // n_property_1        = 3; 
+        // property_value_1    = 2;
+        // n_property_2        = 1;
+        // property_value_2    = 3;
+        // task &= down_neighbors(n_property_1, property_value_1, n_property_2, property_value_2);
+
+        // объект свойство 1 = 2 слево объект свойство 3 = 4
+        // n_property_1        = 1; 
+        // property_value_1    = 2;
+        // n_property_2        = 3;
+        // property_value_2    = 4;
+        // task &= left_neighbors(n_property_1, property_value_1, n_property_2, property_value_2);
+
+        // объект свойство 4 = 3 снизу объект свойство 2 = 1
+        // n_property_1        = 4; 
+        // property_value_1    = 3;
+        // n_property_2        = 2;
+        // property_value_2    = 1;
+        // task &= down_neighbors(n_property_1, property_value_1, n_property_2, property_value_2);
+
+        // объект свойство 2 = 3 снизу объект свойство 0 = 3
+        // n_property_1        = 2; 
+        // property_value_1    = 3;
+        // n_property_2        = 0;
+        // property_value_2    = 3;
+        // task &= down_neighbors(n_property_1, property_value_1, n_property_2, property_value_2);
     }
+
     cout << bdd_satcount(task) << " solution(s) after n3\n"<<endl;
 
-    // Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¸Ðµ n4
+    // огрничение типа 4 (N = 2)
     {
-        int p1, v1, p2, v2;
+        int n_property_1, property_value_1, n_property_2, property_value_2;
 
         // #1
-        p1 = 2, v1 = 0, p2 = 1, v2 = 7;
-        task &= neighbors(p1, v1, p2, v2);
+        n_property_1        = 2;
+        property_value_1    = 3;
+        n_property_2        = 4;
+        property_value_2    = 1;
+        task &= neighbors(n_property_1, property_value_1, n_property_2, property_value_2);
 
         // #2
-        p1 = 1, v1 = 6, p2 = 3, v2 = 4;
-        task &= neighbors(p1, v1, p2, v2);
-
-        // #3 
-        p1 = 2, v1 = 5, p2 = 1, v2 = 3;
-        task &= neighbors(p1, v1, p2, v2);
-
-        // #4
-        p1 = 1, v1 = 2, p2 = 2, v2 = 6;
-        task &= neighbors(p1, v1, p2, v2);
-
-        // #5 
-        p1 = 2, v1 = 1, p2 = 0, v2 = 2;
-        task &= neighbors(p1, v1, p2, v2);
+        n_property_1        = 4;
+        property_value_1    = 3;
+        n_property_2        = 6;
+        property_value_2    = 1;
+        task &= neighbors(n_property_1, property_value_1, n_property_2, property_value_2);
 
         if (IS_DEBUG)
             cout << bdd_satcount(task) << " solution(s) after n4\n"
                  << endl;
     }
 
-    // Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¸Ðµ Ð½Ð° Ð¿Ð¾Ð²NÐ¾Ñ€ ÑÐ²Ð¾Ð¹ÑNÐ²
+    // ограничение номер 5
     {
         for (int k = 0; k < M; ++k)
             for (int i = 0; i < N - 1; ++i)
@@ -313,7 +344,7 @@ int main()
         }
     }
 
-    // Ð¾Ð³Ñ€Ð°Ð½Ð¸Ñ‡ÐµÐ½Ð¸Ðµ n7
+    // Ограничение номер 7
     {
         bdd temp;
         for (int i = 0; i < N; i++)
@@ -337,23 +368,19 @@ int main()
 
     
 
-    // Ð²Ñ‹Ð²Ð¾Ð´ Ñ€ÐµÐ·ÑƒÐ»ÑŒNÐ°NÐ¾Ð²
     cout << bdd_satcount(task) << " solution(s):\n"
          << endl;
     cout << endl;
 
     bdd_allsat(task, fun);
 
-    // Ð·Ð°Ð²ÐµÑ€ÑˆÐµÐ½Ð¸Ðµ Ñ€Ð°Ð±Ð¾NÑ‹ Ð±Ð¸Ð±Ð»Ð¸Ð¾NÐµÐºÐ¸
     bdd_done();
 
     return 0;
 }
 
-// ÐÐ¸Ð¶Ðµ Ñ€ÐµÐ°Ð»Ð¸Ð·Ð°Ñ†Ð¸Ñ Ñ„ÑƒÐ½ÐºÑ†Ð¸Ð¹, ÑƒÐ¿Ñ€Ð°Ð²Ð»ÑÑŽÑ‰Ð¸Ñ… Ð²Ñ‹Ð²Ð¾Ð´Ð¾Ð¼ Ñ€ÐµÐ·ÑƒÐ»ÑŒNÐ°NÐ¾Ð².
-// Ð ÐµÐºÐ¾Ð¼ÐµÐ½Ð´ÑƒÐµNÑÑ ÑÐ°Ð¼Ð¾ÑNÐ¾ÑNÐµÐ»ÑŒÐ½Ð¾ Ñ Ð½Ð¸Ð¼Ð¸ Ð¾Ð·Ð½Ð°ÐºÐ¾Ð¼Ð¸NÑŒÑÑ.
-// Ð’ ÑÐ¾Ð±ÑNÐ²ÐµÐ½Ð½Ñ‹Ñ… Ð·Ð°Ð´Ð°Ð½Ð¸ÑÑ… ÑÐ»ÐµÐ´ÑƒÐµN Ð¸ÑÐ¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°NÑŒ ÑNÐ¸ Ñ„ÑƒÐ½ÐºÑ†Ð¸Ð¸
-// Ð¸Ð»Ð¸ Ð¿Ñ€Ð¸Ð´ÑƒÐ¼Ð°NÑŒ ÑÐ¾Ð±ÑNÐ²ÐµÐ½Ð½Ñ‹Ðµ.
+// Функции для вывода результатов, будет использваны те, 
+// которые содержатся в методическом пособии (их так-же можно придумать самим).
 
 char var[TOTAL_BIT];
 
@@ -437,6 +464,7 @@ void build(char *varset, unsigned n, unsigned I)
 
 void fun(char *varset, int size)
 {
-    // freopen("output", "w", stdout);
+    freopen("output", "w", stdout);
+
     build(varset, size, 0);
 }
